@@ -1,34 +1,58 @@
 const express = require("express");
-const { fetchInsuranceDetails } = require("./insuranceService");
+const axios = require("axios");
 const { updateEmployeeInZoho } = require("./insuranceToZoho");
 
 const app = express();
+const PORT = process.env.PORT || 10000;
+
 app.use(express.json());
 
-app.post("/sync-insurance-to-zoho", async (req, res) => {
+/**
+ * Health check
+ */
+app.get("/", (req, res) => {
+  res.send("✅ Zoho People Cloud Integration is LIVE");
+});
+
+/**
+ * 🔥 ONE-GO CLOUD TEST (NO TERMINAL)
+ * Open this in browser
+ */
+app.get("/test-insurance-sync", async (req, res) => {
   try {
-    const { recordId, employeeCode } = req.body;
-
-    // 1️⃣ Fetch insurance details
-    const insurance = await fetchInsuranceDetails(employeeCode);
-
-    // 2️⃣ Convert to Zoho-pushable format
-    const zohoPayload = {
-      Insurance_Policy_Number: insurance.policy.number,
-      Insurance_Status: insurance.policy.status,
-      Insurance_Start_Date: insurance.policy.start_date,
-      Insurance_End_Date: insurance.policy.end_date,
-      Insurance_Sum_Insured: insurance.policy.sum_insured,
+    // ✅ STEP 1: HARD-CODED, PUSHABLE INSURANCE DATA (for now)
+    // This simulates a REAL insurance system
+    const insuranceData = {
+      recordId: "231124000000283005", // ✅ REAL Zoho recordId
+      policy_number: "STAR-HEALTH-8899",
+      policy_status: "ACTIVE",
     };
 
-    // 3️⃣ Push to Zoho People
-    await updateEmployeeInZoho(recordId, zohoPayload);
+    // ✅ STEP 2: ZOHO-PUSHABLE PAYLOAD (API names)
+    const zohoPayload = {
+      Insurance_Policy_Number: insuranceData.policy_number,
+      Insurance_Status: insuranceData.policy_status,
+    };
 
-    res.json({ status: "INSURANCE_PUSHED_TO_ZOHO" });
+    // ✅ STEP 3: PUSH TO ZOHO PEOPLE
+    await updateEmployeeInZoho(insuranceData.recordId, zohoPayload);
+
+    // ✅ STEP 4: SHOW RESULT IN BROWSER
+    res.json({
+      status: "SUCCESS",
+      message: "Insurance data pushed to Zoho People",
+      pushedData: zohoPayload,
+    });
   } catch (err) {
-    console.error(err.response?.data || err.message);
-    res.status(500).json({ status: "FAILED" });
+    console.error("❌ FINAL ERROR:", err.response?.data || err.message);
+
+    res.status(500).json({
+      status: "FAILED",
+      error: err.response?.data || err.message,
+    });
   }
 });
 
-app.listen(process.env.PORT || 3000);
+app.listen(PORT, () => {
+  console.log(`🚀 Cloud server running on port ${PORT}`);
+});

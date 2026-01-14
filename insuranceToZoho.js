@@ -1,12 +1,16 @@
 const axios = require("axios");
 const { getAccessToken } = require("./token");
 
-async function updateEmployeeInZoho(employeeId, data) {
+async function updateEmployeeInZoho(recordId, insuranceData) {
   const accessToken = await getAccessToken();
 
+  const payload = {
+    data: insuranceData,
+  };
+
   await axios.put(
-    `https://people.zoho.in/people/api/forms/P_Employee/records/${employeeId}`,
-    data,
+    `https://people.zoho.in/people/api/forms/P_EmployeeView/records/${recordId}`,
+    payload,
     {
       headers: {
         Authorization: `Zoho-oauthtoken ${accessToken}`,
@@ -14,8 +18,6 @@ async function updateEmployeeInZoho(employeeId, data) {
       },
     }
   );
-
-  console.log("✅ Zoho People updated for employee:", employeeId);
 }
 
 module.exports = { updateEmployeeInZoho };

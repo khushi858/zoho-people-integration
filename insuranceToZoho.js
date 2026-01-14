@@ -4,18 +4,22 @@ const { getAccessToken } = require("./token");
 async function updateEmployeeInZoho(recordId, data) {
   const accessToken = await getAccessToken();
 
-  await axios.post(
-    `https://people.zoho.in/people/api/forms/employee/records/${recordId}`,
-    {
-      data: data,
-    },
+  const params = new URLSearchParams();
+  params.append("recordId", recordId);
+  params.append("inputData", JSON.stringify(data));
+
+  const response = await axios.post(
+    "https://people.zoho.in/people/api/forms/employee/updateRecord",
+    params,
     {
       headers: {
         Authorization: `Zoho-oauthtoken ${accessToken}`,
-        "Content-Type": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
       },
     }
   );
+
+  return response.data;
 }
 
 module.exports = { updateEmployeeInZoho };

@@ -1,18 +1,31 @@
-import axios from "axios";
-import "dotenv/config";
+const axios = require("axios");
 
-export async function getAccessToken() {
-  const res = await axios.post(
+let cachedToken = null;
+let tokenExpiry = null;
+
+async function getAccessToken() {
+  // reuse token if valid
+  if (cachedToken && tokenExpiry && Date.now() < tokenExpiry) {
+    return cachedToken;
+  }
+
+  const response = await axios.post(
     "https://accounts.zoho.in/oauth/v2/token",
     null,
     {
       params: {
+        refresh_token: process.env.ZOHO_REFRESH_TOKEN,
+        client_id: process.env.ZOHO_CLIENT_ID,
+        client_secret: process.env.ZOHO_CLIENT_SECRET,
         grant_type: "refresh_token",
-        client_id: process.env.CLIENT_ID,
-        client_secret: process.env.CLIENT_SECRET,
-        refresh_token: process.env.REFRESH_TOKEN,
       },
     }
   );
-  return res.data.access_token;
+
+  cachedToken = response.data.access_token;
+  tokenExpiry = Date.now() + response.data.expires_in * 1000;
+
+  return cachedToken;
 }
+
+module.exports = { getAccessToken };

@@ -5,8 +5,9 @@ async function updateEmployeeInZoho(recordId, data) {
   const accessToken = await getAccessToken();
 
   const params = new URLSearchParams();
-  params.append("recordId", recordId);
-  params.append("inputData", JSON.stringify(data));
+  params.append("formLinkName", "employee"); // ✅ REQUIRED
+  params.append("recordId", recordId); // ✅ REQUIRED
+  params.append("inputData", JSON.stringify(data)); // ✅ REQUIRED
 
   const response = await axios.post(
     "https://people.zoho.in/people/api/forms/employee/updateRecord",

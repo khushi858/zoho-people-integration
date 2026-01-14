@@ -1,74 +1,34 @@
 const express = require("express");
-const axios = require("axios");
+const { fetchInsuranceDetails } = require("./insuranceService");
 const { updateEmployeeInZoho } = require("./insuranceToZoho");
-const { fetchEmployees } = require("./fetchEmployees");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
 app.use(express.json());
 
-/**
- * Health check
- */
-app.get("/", (req, res) => {
-  res.send("✅ Zoho People Cloud Integration is LIVE");
-});
-
-/**
- * Zoho → Insurance
- */
-app.post("/sync", async (req, res) => {
+app.post("/sync-insurance-to-zoho", async (req, res) => {
   try {
-    const employees = await fetchEmployees();
+    const { recordId, employeeCode } = req.body;
 
-    for (const emp of employees) {
-      await axios.post(process.env.INSURANCE_WEBHOOK_URL, {
-        employee_id: emp.EmployeeID,
-        employeeEmail: emp.EmailID,
-        gender: emp.Gender,
-        source: "Zoho People Cloud",
-      });
-    }
+    // 1️⃣ Fetch insurance details
+    const insurance = await fetchInsuranceDetails(employeeCode);
 
-    res.json({
-      status: "SUCCESS",
-      employeesProcessed: employees.length,
-    });
-  } catch (err) {
-    console.error("❌ Sync failed:", err.message);
-    res.status(500).json({ status: "FAILED" });
-  }
-});
-
-/**
- * Insurance → Zoho (TWO-WAY integration)
- */
-app.post("/webhook/insurance/update", async (req, res) => {
-  try {
-    console.log("📩 Insurance sent update:", req.body);
-
-    const { employee_id, policy_number, policy_status } = req.body;
-
-    if (!employee_id) {
-      return res.status(400).json({ message: "employee_id missing" });
-    }
-
-    // ✅ CORRECT Zoho People payload
+    // 2️⃣ Convert to Zoho-pushable format
     const zohoPayload = {
-      Insurance_Policy_Number: policy_number,
-      Insurance_Status: policy_status,
+      Insurance_Policy_Number: insurance.policy.number,
+      Insurance_Status: insurance.policy.status,
+      Insurance_Start_Date: insurance.policy.start_date,
+      Insurance_End_Date: insurance.policy.end_date,
+      Insurance_Sum_Insured: insurance.policy.sum_insured,
     };
 
-    await updateEmployeeInZoho(employee_id, zohoPayload);
+    // 3️⃣ Push to Zoho People
+    await updateEmployeeInZoho(recordId, zohoPayload);
 
-    res.json({ status: "UPDATED_IN_ZOHO" });
+    res.json({ status: "INSURANCE_PUSHED_TO_ZOHO" });
   } catch (err) {
-    console.error("❌ Insurance → Zoho failed:", err.message);
+    console.error(err.response?.data || err.message);
     res.status(500).json({ status: "FAILED" });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Cloud server running on port ${PORT}`);
-});
+app.listen(process.env.PORT || 3000);

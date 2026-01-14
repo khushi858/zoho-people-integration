@@ -9,7 +9,7 @@ async function updateEmployeeInZoho(recordId, insuranceData) {
   };
 
   await axios.put(
-    `https://people.zoho.in/people/api/forms/P_EmployeeView/records/${recordId}`,
+    `https://people.zoho.in/people/api/forms/employee/records/${recordId}`,
     payload,
     {
       headers: {
